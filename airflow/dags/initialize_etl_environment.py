@@ -3,7 +3,6 @@ import pytz
 from airflow import DAG
 from airflow.operators.postgres_operator import PostgresOperator
 
-# revise and complete the code below
 # Default arguments for the DAG
 default_args = {
     'owner': 'airflow',
@@ -43,7 +42,15 @@ create_schemas_task = PostgresOperator(
 # Task to create a registry table for tracking file loads
 create_registry_table = PostgresOperator(
     task_id='create_registry_table',
-    sql="""""",
+    sql="""
+    CREATE TABLE IF NOT EXISTS ops.FlatFileLoadRegistry (
+        Filename VARCHAR(255) PRIMARY KEY,
+        Extension VARCHAR(10),
+        LoadDate TIMESTAMP,
+        Processed BOOLEAN,
+        Validated BOOLEAN
+    );
+    """,
     dag=dag,
     postgres_conn_id='sales_dw',
     autocommit=True
@@ -53,6 +60,16 @@ create_registry_table = PostgresOperator(
 create_csv_destination = PostgresOperator(
     task_id='create_csv_destination',
     sql="""
+    CREATE TABLE IF NOT EXISTS import.ResellerCSV (
+        reseller_id VARCHAR(255),  -- Allow for alphanumeric IDs
+        transaction_id VARCHAR(255),
+        product_name VARCHAR(255),
+        total_amount NUMERIC,
+        number_of_purchased_postcards INT,
+        created_date DATE,
+        office_location VARCHAR(255),
+        sales_channel VARCHAR(255)
+    );
     """,
     dag=dag,
     postgres_conn_id='sales_dw',
@@ -63,6 +80,16 @@ create_csv_destination = PostgresOperator(
 create_xml_destination_task = PostgresOperator(
     task_id='create_xml_destination',
     sql="""
+    CREATE TABLE IF NOT EXISTS import.ResellerXML (
+        reseller_id VARCHAR(255),  -- Allow for alphanumeric IDs
+        transaction_id VARCHAR(255),
+        product_name VARCHAR(255),
+        total_amount NUMERIC,
+        no_purchased_postcards INT,
+        date_bought DATE,
+        office_location VARCHAR(255),
+        sales_channel VARCHAR(255)
+    );
     """,
     dag=dag,
     postgres_conn_id='sales_dw',
@@ -70,23 +97,84 @@ create_xml_destination_task = PostgresOperator(
 )
 
 # Task to create a destination table for transaction data
-
+create_transactions_task = PostgresOperator(
+    task_id='create_transactions',
+    sql="""
+    CREATE TABLE IF NOT EXISTS import.transactions (
+        transaction_id VARCHAR(255),
+        customer_id VARCHAR(255),  -- Adjusted to handle alphanumeric IDs
+        product_id VARCHAR(255),   -- Allow for alphanumeric product IDs
+        amount NUMERIC,
+        qty INT,
+        channel_id VARCHAR(255),   -- Adjusted to match channel_id datatype
+        bought_date DATE
+    );
+    """,
+    dag=dag,
+    postgres_conn_id='sales_dw',
+    autocommit=True
+)
 
 # Task to create a destination table for reseller data
-
+create_resellers_task = PostgresOperator(
+    task_id='create_resellers',
+    sql="""
+    CREATE TABLE IF NOT EXISTS import.resellers (
+        reseller_id VARCHAR(255),  -- Allow for alphanumeric IDs
+        reseller_name VARCHAR(255),
+        commission_pct NUMERIC
+    );
+    """,
+    dag=dag,
+    postgres_conn_id='sales_dw',
+    autocommit=True
+)
 
 # Task to create a destination table for channel data
-
+create_channels_task = PostgresOperator(
+    task_id='create_channels',
+    sql="""
+    CREATE TABLE IF NOT EXISTS import.channels (
+        channel_id VARCHAR(255),   -- Adjusted to handle alphanumeric IDs
+        channel_name VARCHAR(255)
+    );
+    """,
+    dag=dag,
+    postgres_conn_id='sales_dw',
+    autocommit=True
+)
 
 # Task to create a destination table for customer data
-
+create_customers_task = PostgresOperator(
+    task_id='create_customers',
+    sql="""
+    CREATE TABLE IF NOT EXISTS import.customers (
+        customer_id VARCHAR(255),  -- Adjusted to handle alphanumeric IDs
+        first_name VARCHAR(255),
+        last_name VARCHAR(255),
+        email VARCHAR(255)
+    );
+    """,
+    dag=dag,
+    postgres_conn_id='sales_dw',
+    autocommit=True
+)
 
 # Task to create a destination table for product data
-
-
-# Task to create a destination table for your selected tables
-
+create_products_task = PostgresOperator(
+    task_id='create_products',
+    sql="""
+    CREATE TABLE IF NOT EXISTS import.products (
+        product_id VARCHAR(255),   -- Adjusted to handle alphanumeric product IDs
+        name VARCHAR(255),
+        price NUMERIC
+    );
+    """,
+    dag=dag,
+    postgres_conn_id='sales_dw',
+    autocommit=True
+)
 
 # Define the task dependencies
-# create_schemas_task >> create_registry_table >>
-# create_schemas_task >> [create_transactions_task, ###]
+create_schemas_task >> create_registry_table
+create_schemas_task >> [create_csv_destination, create_xml_destination_task, create_transactions_task, create_resellers_task, create_channels_task, create_customers_task, create_products_task]

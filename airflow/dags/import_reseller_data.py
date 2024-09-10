@@ -1,3 +1,4 @@
+# Import necessary libraries and modules
 from datetime import timedelta, datetime
 import pytz
 from airflow import DAG
@@ -38,8 +39,6 @@ default_args = {
     'retry_delay': timedelta(minutes=1)  # Delay between retries
 }
 
-########################################################################################################################
-# Read and complete the code files for the DAG
 # Define the DAG
 dag = DAG(
     'import_reseller_data',
@@ -255,8 +254,8 @@ create_transform_reseller_destination = PostgresOperator(
     task_id='create_transform_reseller_destination',
     sql="""
         CREATE TABLE IF NOT EXISTS staging.ResellerXmlExtracted (
-        reseller_id int,
-        )
+        reseller_id int
+        );
     """,
     dag=dag,
     postgres_conn_id='sales_dw',
@@ -267,12 +266,8 @@ create_transform_reseller_destination = PostgresOperator(
 insert_transform_reseller = PostgresOperator(
     task_id='insert_transform_reseller',
     sql="""
-        INSERT INTO staging.ResellerXmlExtracted (
-        reseller_id,
-        )
-        SELECT 
-        
-        FROM import.resellerxml
+        INSERT INTO staging.ResellerXmlExtracted (reseller_id)
+        SELECT DISTINCT reseller_id FROM import.resellerxml;
     """,
     dag=dag,
     postgres_conn_id='sales_dw',
@@ -280,9 +275,9 @@ insert_transform_reseller = PostgresOperator(
 )
 
 # Define the task dependencies
-create_transform_reseller_destination >> ##
-
-wait_for_init >> [##, ##]
-preprocess_csv >> ##
-preprocess_xml >> ##
-#import_xml >> ### >> ###
+create_transform_reseller_destination >> insert_transform_reseller
+wait_for_init >> [preprocess_csv, preprocess_xml]
+preprocess_csv >> import_csv
+preprocess_xml >> import_xml
+import_csv >> insert_transform_reseller
+import_xml >> insert_transform_reseller

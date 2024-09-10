@@ -1,53 +1,34 @@
-WITH
-
-customers_main AS (
-
+WITH customers_main AS (
     SELECT
-    
-    FROM {{ref()}}
-
+      customer_id,
+      first_name,
+      last_name,
+      email,
+      loaded_timestamp
+    FROM {{ ref('src_customers') }}
 ),
-
-customers_csv  AS (
-
-    SELECT  
-
-    split_part(split_part(imported_file, '_', 3),'.',1)::int AS reseller_id, -- add more columns
-
-    FROM {{ref()}}
-)
-,
-
-customers_xml AS (
-
-
+customers_csv AS (
     SELECT
-
-    FROM {{source('preprocessed','resellerxmlextracted')}}
-), 
-
-customers AS (
-
-
-select from customers_csv --transaction_id from csv and xml are used as customer_id
-
-union 
-
-select from customers_xml
-
-union
-
-select 0 as reseller_id, from customers_main
+      SPLIT_PART(SPLIT_PART(imported_file, '_', 3), '.', 1)::INT AS reseller_id,
+      first_name,
+      last_name,
+      email,
+      loaded_timestamp
+    FROM {{ ref('src_customers_csv') }}
+),
+customers_xml AS (
+    SELECT
+      first_name,
+      last_name,
+      email,
+      loaded_timestamp
+    FROM {{ source('preprocessed', 'resellerxmlextracted') }}
 )
 
-select 
-
-  {{ dbt_utils.generate_surrogate_key([
-      'c.reseller_id',
-      'customer_id']
-  ) }} as customer_key,
- 
---- add more columns
-
-from customers c
-left join {{ref()}} s on c.reseller_id = s.original_reseller_id
+SELECT
+  c.customer_id,
+  c.first_name,
+  c.last_name,
+  {{ dbt_utils.generate_surrogate_key(['c.customer_id', 'cu.reseller_id']) }} AS customer_key
+FROM customers c
+LEFT JOIN {{ ref('staging_resellers') }} cu ON c.customer_id = cu.customer_id

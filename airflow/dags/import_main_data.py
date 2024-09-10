@@ -48,17 +48,32 @@ import_transactions_task = BashOperator(
 )
 
 # Task to import channels data
-import_channels_task = BashOperator()
+import_channels_task = BashOperator(
+    task_id='import_channels',
+    bash_command=f"""psql {AIRFLOW_CONN_SALES_OLTP} -c "\copy channels to stdout" | psql {AIRFLOW_CONN_SALES_DW} -c "\copy import.channels(channel_id, channel_name) from stdin" """,
+    dag=dag,
+)
 
 # Task to import resellers data
-import_resellers_task = BashOperator()
+import_resellers_task = BashOperator(
+    task_id='import_resellers',
+    bash_command=f"""psql {AIRFLOW_CONN_SALES_OLTP} -c "\copy resellers to stdout" | psql {AIRFLOW_CONN_SALES_DW} -c "\copy import.resellers(reseller_id, reseller_name, commission_pct) from stdin" """,
+    dag=dag,
+)
 
 # Task to import customers data
-import_customers_task = BashOperator()
+import_customers_task = BashOperator(
+    task_id='import_customers',
+    bash_command=f"""psql {AIRFLOW_CONN_SALES_OLTP} -c "\copy customers to stdout" | psql {AIRFLOW_CONN_SALES_DW} -c "\copy import.customers(customer_id, first_name, last_name, email) from stdin" """,
+    dag=dag,
+)
 
 # Task to import products data
-import_products_task = BashOperator()
-
+import_products_task = BashOperator(
+    task_id='import_products',
+    bash_command=f"""psql {AIRFLOW_CONN_SALES_OLTP} -c "\copy products to stdout" | psql {AIRFLOW_CONN_SALES_DW} -c "\copy import.products(product_id, name, price) from stdin" """,
+    dag=dag,
+)
 
 # Define the task dependencies
-# wait_for_init >> import_transactions_task >> []
+wait_for_init >> import_transactions_task >> [import_channels_task, import_resellers_task, import_customers_task, import_products_task]

@@ -1,13 +1,15 @@
-with products as (
-
-SELECT
-from {{ref('src_products')}} e
-join {{ref('geography')}} g on g.cityname = e.product_city
-
+WITH products AS (
+    SELECT
+      product_id,
+      product_name,
+      cityname AS product_city,
+      loaded_timestamp
+    FROM {{ ref('src_products') }} e
+    JOIN {{ ref('geography') }} g ON g.cityname = e.product_city
 )
 
-select ---
-
-from products
-
-where rn = 1
+SELECT
+  product_id,
+  product_name,
+  product_city
+FROM products

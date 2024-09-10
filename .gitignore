@@ -171,4 +171,10 @@ cython_debug/
 # Playwright files
 **/screenshots/*
 
+**/import/*
 
+all_files_content.txt
+file_list_with_content.txt
+
+collect_py_sql_files.sh
+list_files.sh
