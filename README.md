@@ -1,1 +1,1 @@
-![portable-data-stack-airflow-assignment/image.png](../docs/image.png)
+![alt text](docs/image.png)
